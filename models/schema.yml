@@ -1,0 +1,512 @@
+version: 2
+sources:
+  - name: PolicyStats
+    database: mytest_db
+    schema: policy_trn_staging
+    tables:
+      - name: stg_pt
+    quoting:
+      database: False
+      schema: False
+      identifier: False
+
+seeds: 
+  - name: dim_transaction
+    description: "List of transaction types to create DIM_TANSACTION"
+    config:
+      tags:
+        - dim      
+      column_types:
+        transaction_id: varchar(3)
+        transactioncd: varchar(50)
+    columns:
+      - name: transaction_id
+        description: "The primary key for this table"
+        tests:
+          - dbt_constraints.primary_key
+          - not_null    
+      - name: transactioncd
+        description: "Transaction code"
+        tests:
+          - not_null            
+
+models:
+  - name: dim_policy 
+    config:
+      contract: {enforced: true}
+      tags:
+        - dim      
+    description: "Auto policy dimension"
+    constraints:
+      - type: primary_key
+        columns: [policy_id]
+    columns:
+      - name: policy_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+        tests:
+          - unique          
+        description: "The primary key for this table"
+      - name: policy_uniqueid
+        data_type: integer
+        constraints:
+          - type: not_null 
+        tests:
+          - unique          
+      - name: policynumber
+        data_type: varchar(20)
+        constraints:
+         - type: not_null      
+      - name: effectivedate
+        data_type: date
+        constraints:
+          - type: not_null      
+      - name: expirationdate
+        data_type: date
+        constraints:
+          - type: not_null      
+      - name: inceptiondate
+        data_type: date
+        constraints:
+          - type: not_null      
+      - name: policystate
+        data_type: varchar(2)
+        constraints:
+          - type: not_null      
+      - name: carriercd
+        data_type: varchar(10)
+        constraints:
+          - type: not_null      
+      - name: companycd
+        data_type: varchar(10)
+        constraints:
+          - type: not_null      
+      - name: loaddate
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null      
+  - name: dim_limit
+    config:
+      contract: {enforced: true}
+      tags:
+        - dim      
+    description: "Limits dimension"
+    constraints:
+      - type: primary_key
+        columns: [limit_id]           
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - limit1
+            - limit2
+    columns:
+      - name: limit_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+        description: "The primary key for this table"
+        tests:
+          - unique
+      - name: limit1
+        data_type: varchar(100)
+        constraints:
+          - type: not_null 
+      - name: limit2
+        data_type: varchar(100)
+        constraints:
+          - type: not_null                
+      - name: loaddate
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null                 
+  - name: dim_deductible
+    config:
+      contract: {enforced: true}
+      tags:
+        - dim       
+    description: "Deductibles dimension"
+    constraints:
+      - type: primary_key
+        columns: [deductible_id]      
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - deductible1
+            - deductible2    
+    columns:
+      - name: deductible_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+        description: "The primary key for this table"
+        tests:
+          - unique
+      - name: deductible1
+        data_type: numeric
+        constraints:
+          - type: not_null 
+      - name: deductible2
+        data_type: numeric
+        constraints:
+          - type: not_null                
+      - name: loaddate
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null          
+  - name: dim_coverage
+    config:
+      contract: {enforced: true}
+      tags:
+        - dim         
+    description: "Coverage dimension"  
+    constraints:
+      - type: primary_key
+        columns: [coverage_id] 
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - coveragecd
+            - subline
+            - asl 
+    columns:
+      - name: coverage_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+        tests:
+          - unique          
+        description: "The primary key for this table"        
+      - name: coveragecd
+        data_type: varchar(50)
+        constraints:
+          - type: not_null          
+      - name: subline
+        data_type: varchar(20)
+        constraints:
+          - type: not_null  
+      - name: asl
+        data_type: varchar(20)
+        constraints:
+          - type: not_null                           
+      - name: loaddate
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null
+  - name: dim_vehicle
+    config:
+      contract: {enforced: false}
+      tags:
+        - dim         
+    description: "Vehicle dimension" 
+    constraints:
+      - type: primary_key
+        columns: [vehicle_id]  
+    tests:
+      - dbt_scd2_plus.scd2_plus_validation:
+          unique_key: vehicle_uniqueid  
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - VEHICLE_UNIQUEID
+            - VALID_FROM         
+    columns:
+      - name: vehicle_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: unique
+        description: "The primary key for this table"
+        tests:
+          - dbt_constraints.primary_key
+          - not_null  
+          - unique            
+      - name: VALID_FROM
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null 
+        tests:
+          - not_null                    
+      - name: VALID_TO
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null
+      - name: RECORD_VERSION
+        data_type: integer
+        constraints:
+          - type: not_null       
+        tests:
+          - not_null             
+      - name: VEHICLE_UNIQUEID
+        data_type: varchar(100)
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null          
+      - name: ESTIMATEDANNUALDISTANCE
+        data_type: varchar(100)
+        constraints:
+          - type: not_null   
+        tests:
+          - not_null              
+      - name: VIN
+        data_type: varchar(20)
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null          
+      - name: MODEL
+        data_type: varchar(100)
+        constraints:
+          - type: not_null 
+        tests:
+          - not_null           
+      - name: MODELYR
+        data_type: varchar(100)
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null          
+      - name: MANUFACTURER
+        data_type: varchar(100)
+        constraints:
+          - type: not_null     
+        tests:
+          - not_null                           
+      - name: LOADDATE
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null
+        tests:
+          - not_null          
+      - name: UPDATEDATE
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null 
+        tests:
+          - not_null          
+      - name: SCD_HASH
+        data_type: varchar(50)
+        constraints:
+          - type: not_null         
+        tests:
+          - not_null            
+  - name: dim_driver
+    config:
+      contract: {enforced: false}
+      tags:
+        - dim         
+    description: "Driver dimension" 
+    constraints:
+      - type: primary_key
+        columns: [driver_id]  
+    tests:
+      - dbt_scd2_plus.scd2_plus_validation:
+          unique_key: driver_uniqueid  
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - DRIVER_UNIQUEID
+            - VALID_FROM         
+    columns:
+      - name: driver_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: unique
+        description: "The primary key for this table"
+        tests:
+          - dbt_constraints.primary_key
+          - not_null    
+          - unique          
+      - name: VALID_FROM
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null 
+        tests:
+          - not_null                    
+      - name: VALID_TO
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null
+      - name: RECORD_VERSION
+        data_type: integer
+        constraints:
+          - type: not_null       
+        tests:
+          - not_null             
+      - name: DRIVER_UNIQUEID
+        data_type: varchar(100)
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null          
+      - name: gendercd
+        data_type: varchar(10)
+        constraints:
+          - type: not_null   
+        tests:
+          - not_null              
+      - name: birthdate
+        data_type: date
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null          
+      - name: maritalstatuscd
+        data_type: varchar(10)
+        constraints:
+          - type: not_null 
+        tests:
+          - not_null           
+      - name: pointschargedterm
+        data_type: integer
+        constraints:
+          - type: not_null  
+        tests:
+          - not_null                                
+      - name: LOADDATE
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null
+        tests:
+          - not_null          
+      - name: UPDATEDATE
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null 
+        tests:
+          - not_null          
+      - name: SCD_HASH
+        data_type: varchar(50)
+        constraints:
+          - type: not_null         
+        tests:
+          - not_null            
+  - name: fact_policytransaction
+    config:
+      contract: {enforced: true}
+      tags:
+        - fact       
+    description: "Policy Transaction Fact Table" 
+    columns:
+      - name: policytransaction_id
+        data_type: integer
+        description: "It's based on transactiondate and can be duplicated"
+        constraints:
+          - type: not_null  
+      - name: transactiondate
+        data_type: int
+        description: "Transaction date"
+        constraints:
+          - type: not_null    
+      - name: accountingdate
+        data_type: int
+        description: "Accounting date"
+        constraints:
+          - type: not_null    
+      - name: transactioneffectivedate
+        data_type: int
+        description: "Transaction Effective date"
+        constraints:
+          - type: not_null
+      - name: transactionsequence
+        data_type: int
+        description: "Transaction Sequence Number per Policy term"
+        constraints:
+          - type: not_null          
+      - name: amount
+        data_type: numeric
+        description: "Transaction Amount"
+        constraints:
+          - type: not_null                 
+      - name: transaction_id
+        data_type: varchar(3)
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            expression: "{{ target.schema }}.dim_transaction(transaction_id)"          
+        tests:
+          - relationships:
+              config:          
+                where: "loaddate = '{{ var('loaddate') }}'"          
+              to: ref('dim_transaction')
+              field: transaction_id      
+      - name: policy_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            expression: "{{ target.schema }}.dim_policy(policy_id)"       
+        tests:
+          - relationships:
+              config:          
+                where: "loaddate = '{{ var('loaddate') }}'"          
+              to: ref('dim_policy')
+              field: policy_id              
+      - name: coverage_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            expression: "{{ target.schema }}.dim_coverage(coverage_id)"       
+        tests:
+          - relationships:
+              config:          
+                where: "loaddate = '{{ var('loaddate') }}'"          
+              to: ref('dim_coverage')
+              field: coverage_id
+      - name: limit_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            expression: "{{ target.schema }}.dim_limit(limit_id)"       
+        tests:
+          - relationships:
+              config:          
+                where: "loaddate = '{{ var('loaddate') }}'"          
+              to: ref('dim_limit')
+              field: limit_id
+      - name: deductible_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            expression: "{{ target.schema }}.dim_deductible(deductible_id)"       
+        tests: 
+          - relationships:
+              config:          
+                where: "loaddate = '{{ var('loaddate') }}'"          
+              to: ref('dim_deductible')
+              field: deductible_id              
+      - name: driver_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            expression: "{{ target.schema }}.dim_driver(driver_id)"       
+        tests:
+          - relationships:
+              config:          
+                where: "loaddate = '{{ var('loaddate') }}'"          
+              to: ref('dim_driver')
+              field: driver_id               
+      - name: vehicle_id
+        data_type: varchar(50)
+        constraints:
+          - type: not_null
+          - type: foreign_key
+            expression: "{{ target.schema }}.dim_vehicle(vehicle_id)"       
+        tests:
+          - relationships:
+              config:          
+                where: "loaddate = '{{ var('loaddate') }}'"
+              to: ref('dim_vehicle')
+              field: vehicle_id                      
+      - name: loaddate
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null                                                
